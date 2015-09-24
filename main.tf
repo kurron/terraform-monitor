@@ -8,72 +8,61 @@ provider "aws" {
     max_retries = 10
 }
 
-resource "aws_security_group" "web-access" {
-    name = "web-access"
-    description = "Firewall rules to allow provisioning and application deployment"
-
+resource "aws_security_group" "allow_all" {
+    name = "allow_all"
+    description = "Allow all inbound traffic"
+    vpc_id = "${aws_vpc.main.id}"
     tags {
+        Name = "main"
         realm = "experimental"
+        purpose = "docker-container"
         created-by = "Terraform"
-        direction = "bi-dierectional"
-        purpose = "application"
     }
-}
-
-resource "aws_security_group" "elb" {
-    name = "elb"
-    description = "Firewall rules for the load balancer"
 
     ingress {
-      from_port = 80
-      to_port = 80
-      protocol = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
+        from_port = 0
+        to_port = 0
+        protocol = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
     }
 
     egress {
-      from_port = 0
-      to_port = 65535
-      protocol = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
+        from_port = 0
+        to_port = 0
+        protocol = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
     }
+}
+
+resource "aws_vpc" "main" {
+    cidr_block = "10.0.0.0/16"
 
     tags {
+        Name = "Main"
         realm = "experimental"
+        purpose = "docker-container"
         created-by = "Terraform"
-        direction = "bi-dierectional"
-        purpose = "application"
     }
 }
 
-resource "aws_security_group_rule" "inbound-ssh" {
-    type = "ingress"
-    from_port = 22
-    to_port = 22
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+resource "aws_subnet" "main" {
+    vpc_id = "${aws_vpc.main.id}"
+    cidr_block = "10.0.1.0/24" 
 
-    security_group_id = "${aws_security_group.web-access.id}"
+    tags {
+        Name = "Main"
+        realm = "experimental"
+        purpose = "docker-container"
+        created-by = "Terraform"
+    }
 }
 
-resource "aws_security_group_rule" "inbound-http" {
-    type = "ingress"
-    from_port = 80
-    to_port = 80
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+resource "aws_internet_gateway" "gw" {
+    vpc_id = "${aws_vpc.main.id}"
 
-    security_group_id = "${aws_security_group.web-access.id}"
-}
-
-resource "aws_security_group_rule" "allow-all-outbound" {
-    type = "egress"
-    from_port = 0
-    to_port = 65535
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-
-    security_group_id = "${aws_security_group.web-access.id}"
+    tags {
+        Name = "main"
+    }
 }
 
 resource "aws_instance" "docker" {
@@ -81,14 +70,17 @@ resource "aws_instance" "docker" {
         user = "ubuntu"
         key_file = "${lookup(var.key_path, var.aws_region)}"
     }
-
+    depends_on = ["aws_internet_gateway.gw"]
     count = "${var.docker_instance_count}"
 #   count = 1 
     ami = "${lookup(var.aws_amis, var.aws_region)}"
     instance_type = "${var.instance_type}"
     key_name = "${lookup(var.key_name, var.aws_region)}"
-    security_groups = ["${aws_security_group.web-access.name}"]
+#   security_groups = ["${aws_security_group.web-access.name}"]
+    vpc_security_group_ids = ["${aws_security_group.allow_all.id}"]
+    subnet_id = "${aws_subnet.main.id}"
 
+    key_name = "Ronbo"
     tags {
         realm = "experimental"
         purpose = "docker-container"
@@ -100,41 +92,3 @@ resource "aws_instance" "docker" {
 #       command = "./provision-instance.sh ${self.public_ip} ${lookup(var.key_path, var.aws_region)}"
 #   }
 }
-
-#provider "docker" {
-#   host = "tcp://${aws_instance.docker.public_ip}:2375/"
-#   depends_on = ["aws_instance.docker"]
-#}
-
-resource "aws_elb" "load-balancer" {
-    name = "load-balancer"
-    availability_zones = ["${aws_instance.docker.*.availability_zone}"] 
-
-    listener {
-        instance_port = 80
-        instance_protocol = "http"
-        lb_port = 80
-        lb_protocol = "http"
-    }
-
-    health_check {
-        healthy_threshold = 2
-        unhealthy_threshold = 2
-        timeout = 3
-        target = "HTTP:80/"
-        interval = 30
-    }
-
-    tags {
-        realm = "experimental"
-        created-by = "Terraform"
-    }
-
-    instances = ["${aws_instance.docker.*.id}"]
-    security_groups = ["${aws_security_group.elb.id}"]
-    cross_zone_load_balancing = true
-    idle_timeout = 400
-    connection_draining = true
-    connection_draining_timeout = 400
-}
-
