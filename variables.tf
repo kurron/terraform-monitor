@@ -5,7 +5,7 @@ variable "aws_region" {
 
 variable "instance_type" {
     description = "AWS EC2 instance type."
-    default = "t2.small"
+    default = "t2.micro"
 #   default = "t2.large"
 }
 
