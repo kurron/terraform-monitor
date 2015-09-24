@@ -13,9 +13,9 @@ resource "aws_security_group" "allow_all" {
     description = "Allow all inbound traffic"
     vpc_id = "${aws_vpc.main.id}"
     tags {
-        Name = "main"
+        Name = "allow-all"
         realm = "experimental"
-        purpose = "docker-container"
+        purpose = "monitoring-simulation"
         created-by = "Terraform"
     }
 
@@ -38,9 +38,9 @@ resource "aws_vpc" "main" {
     cidr_block = "10.0.0.0/16"
 
     tags {
-        Name = "Main"
+        Name = "Monitoring"
         realm = "experimental"
-        purpose = "docker-container"
+        purpose = "monitoring-simulation"
         created-by = "Terraform"
     }
 }
@@ -50,9 +50,9 @@ resource "aws_subnet" "main" {
     cidr_block = "10.0.1.0/24" 
 
     tags {
-        Name = "Main"
+        Name = "Docker Boxes"
         realm = "experimental"
-        purpose = "docker-container"
+        purpose = "monitoring-simulation"
         created-by = "Terraform"
     }
 }
@@ -61,7 +61,10 @@ resource "aws_internet_gateway" "gw" {
     vpc_id = "${aws_vpc.main.id}"
 
     tags {
-        Name = "main"
+        Name = "Monitoring"
+        realm = "experimental"
+        purpose = "monitoring-simulation"
+        created-by = "Terraform"
     }
 }
 
@@ -72,23 +75,17 @@ resource "aws_instance" "docker" {
     }
     depends_on = ["aws_internet_gateway.gw"]
     count = "${var.docker_instance_count}"
-#   count = 1 
     ami = "${lookup(var.aws_amis, var.aws_region)}"
     instance_type = "${var.instance_type}"
     key_name = "${lookup(var.key_name, var.aws_region)}"
-#   security_groups = ["${aws_security_group.web-access.name}"]
     vpc_security_group_ids = ["${aws_security_group.allow_all.id}"]
     subnet_id = "${aws_subnet.main.id}"
+    associate_public_ip_address = true
 
-    key_name = "Ronbo"
     tags {
+        Name = "Monitoring"
         realm = "experimental"
-        purpose = "docker-container"
+        purpose = "monitoring-simulation"
         created-by = "Terraform"
     }
-
-    # run Ansible to provision the box
-#   provisioner "local-exec" {
-#       command = "./provision-instance.sh ${self.public_ip} ${lookup(var.key_path, var.aws_region)}"
-#   }
 }
