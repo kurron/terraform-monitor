@@ -8,73 +8,6 @@ provider "aws" {
     max_retries = 10
 }
 
-resource "aws_s3_bucket" "web-site" {
-    bucket = "s3-website-test-kurron-org"
-    acl = "public-read"
-
-    tags {
-        realm = "experimental"
-        created-by = "Terraform"
-    }
-
-    website {
-        index_document = "index.html"
-        error_document = "error.html"
-    }
-}
-
-resource "aws_sqs_queue" "example_queue" {
-    name = "example-queue"
-}
-
-resource "aws_sns_topic" "example_topic" {
-    name = "example-topic"
-}
-
-resource "aws_security_group" "mysql-access" {
-    name = "mysql-access"
-    description = "Firewall rules to allow public access to MySQL"
-
-    ingress {
-      from_port = 3306
-      to_port = 3306
-      protocol = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
-    }
-
-    egress {
-      from_port = 0
-      to_port = 65535
-      protocol = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
-    }
-
-    tags {
-        realm = "experimental"
-        created-by = "Terraform"
-        direction = "bi-dierectional"
-        purpose = "application"
-    }
-}
-
-resource "aws_db_instance" "mysql" {
-    count = 1
-    identifier = "mysql"
-    allocated_storage = 20
-    engine = "mysql"
-    engine_version = "5.6.23"
-    instance_class = "db.t2.micro"
-    storage_type = "gp2"
-    username = "terraform"
-    password = "terraform"
-    publicly_accessible = true
-    vpc_security_group_ids = ["${aws_security_group.mysql-access.id}"]
-    tags {
-        realm = "experimental"
-        created-by = "Terraform"
-    }
-}
-
 resource "aws_security_group" "web-access" {
     name = "web-access"
     description = "Firewall rules to allow provisioning and application deployment"
@@ -123,30 +56,10 @@ resource "aws_security_group_rule" "inbound-ssh" {
     security_group_id = "${aws_security_group.web-access.id}"
 }
 
-#resource "aws_security_group_rule" "inbound-docker" {
-#   type = "ingress"
-#   from_port = 2375
-#   to_port = 2375
-#   protocol = "tcp"
-#   cidr_blocks = ["0.0.0.0/0"]
-
-#   security_group_id = "${aws_security_group.web-access.id}"
-#}
-
 resource "aws_security_group_rule" "inbound-http" {
     type = "ingress"
     from_port = 80
     to_port = 80
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-
-    security_group_id = "${aws_security_group.web-access.id}"
-}
-
-resource "aws_security_group_rule" "inbound-https" {
-    type = "ingress"
-    from_port = 443
-    to_port = 443
     protocol = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
 
@@ -183,30 +96,14 @@ resource "aws_instance" "docker" {
     }
 
     # run Ansible to provision the box
-    provisioner "local-exec" {
-        command = "./provision-instance.sh ${self.public_ip} ${lookup(var.key_path, var.aws_region)}"
-    }
+#   provisioner "local-exec" {
+#       command = "./provision-instance.sh ${self.public_ip} ${lookup(var.key_path, var.aws_region)}"
+#   }
 }
 
 #provider "docker" {
 #   host = "tcp://${aws_instance.docker.public_ip}:2375/"
 #   depends_on = ["aws_instance.docker"]
-#}
-
-#resource "docker_image" "nginx" {
-#   image = "nginx"
-#   keep_updated = true
-#}
-
-#resource "docker_container" "nginx" {
-#   image = "${docker_image.nginx.latest}"
-#   name = "nginx"
-#   hostname = "nginx"
-#   must_run = true
-#   ports {
-#       internal = 80
-#       external = 80
-#   }
 #}
 
 resource "aws_elb" "load-balancer" {

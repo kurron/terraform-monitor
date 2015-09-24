@@ -1,16 +1,17 @@
 variable "aws_region" {
     description = "AWS region to launch servers."
-    default = "us-east-1"
+    default = "us-west-2"
 }
 
 variable "instance_type" {
     description = "AWS EC2 instance type."
-    default = "t2.micro"
+    default = "t2.small"
+#   default = "t2.large"
 }
 
 variable "docker_instance_count" {
     description = "How many Docker instances to spin up."
-    default = 2 
+    default = 1 
 }
 
 variable "key_name" {
@@ -33,7 +34,7 @@ variable "key_path" {
     default = {
         us-east-1      = "/home/vagrant/aws/us-east-1.pem"
         us-west-1      = "/home/vagrant/aws/us-west-1.pem"
-        us-west-2      = "/home/vagrant/aws/us-west-2.pem"
+        us-west-2      = "/home/vagrant/GitHub/terraform-monitor/kurr-experiments.pem"
         eu-west-1      = "/home/vagrant/aws/eu-west-1.pem"
         eu-central-1   = "/home/vagrant/aws/eu-central-1.pem"
         sa-east-1      = "/home/vagrant/aws/sa-east-1.pem"
