@@ -110,3 +110,8 @@ resource "aws_instance" "docker" {
         created-by = "Terraform"
     }
 }
+
+resource "aws_eip" "lb" {
+    instance = "${aws_instance.docker.id}"
+    vpc = true
+}

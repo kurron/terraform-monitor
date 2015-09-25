@@ -5,8 +5,8 @@ variable "aws_region" {
 
 variable "instance_type" {
     description = "AWS EC2 instance type."
-    default = "t2.micro"
-#   default = "t2.large"
+#   default = "t2.micro"
+    default = "t2.large"
 }
 
 variable "docker_instance_count" {
