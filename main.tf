@@ -13,7 +13,7 @@ resource "aws_security_group" "allow_all" {
     description = "Allow all inbound traffic"
     vpc_id = "${aws_vpc.main.id}"
     tags {
-        Name = "allow-all"
+        Name = "Allow All Traffic"
         realm = "experimental"
         purpose = "monitoring-simulation"
         created-by = "Terraform"
@@ -39,7 +39,7 @@ resource "aws_vpc" "main" {
     enable_dns_hostnames = true
 
     tags {
-        Name = "Monitoring"
+        Name = "Monitoring Simulation"
         realm = "experimental"
         purpose = "monitoring-simulation"
         created-by = "Terraform"
@@ -63,7 +63,7 @@ resource "aws_internet_gateway" "main" {
     vpc_id = "${aws_vpc.main.id}"
 
     tags {
-        Name = "Monitoring"
+        Name = "Monitoring Simulation"
         realm = "experimental"
         purpose = "monitoring-simulation"
         created-by = "Terraform"
@@ -78,7 +78,7 @@ resource "aws_route_table" "main" {
     }
 
     tags {
-        Name = "main"
+        Name = "Monitor Simulation"
         realm = "experimental"
         purpose = "monitoring-simulation"
         created-by = "Terraform"
@@ -90,13 +90,13 @@ resource "aws_main_route_table_association" "main" {
     route_table_id = "${aws_route_table.main.id}"
 }
 
-resource "aws_instance" "docker" {
+resource "aws_instance" "new_relic" {
     connection {
         user = "ubuntu"
         key_file = "${lookup(var.key_path, var.aws_region)}"
     }
     depends_on = ["aws_internet_gateway.main"]
-    count = "${var.docker_instance_count}"
+    count = 1 
     ami = "${lookup(var.aws_amis, var.aws_region)}"
     instance_type = "${var.instance_type}"
     key_name = "${lookup(var.key_name, var.aws_region)}"
@@ -104,14 +104,41 @@ resource "aws_instance" "docker" {
     subnet_id = "${aws_subnet.main.id}"
 
     tags {
-        Name = "Monitoring"
+        Name = "New Relic"
         realm = "experimental"
         purpose = "monitoring-simulation"
         created-by = "Terraform"
     }
 }
 
-resource "aws_eip" "lb" {
-    instance = "${aws_instance.docker.id}"
+resource "aws_eip" "new_relic" {
+    instance = "${aws_instance.new_relic.id}"
     vpc = true
 }
+
+resource "aws_instance" "data_dog" {
+    connection {
+        user = "ubuntu"
+        key_file = "${lookup(var.key_path, var.aws_region)}"
+    }
+    depends_on = ["aws_internet_gateway.main"]
+    count = 1
+    ami = "${lookup(var.aws_amis, var.aws_region)}"
+    instance_type = "${var.instance_type}"
+    key_name = "${lookup(var.key_name, var.aws_region)}"
+    vpc_security_group_ids = ["${aws_security_group.allow_all.id}"]
+    subnet_id = "${aws_subnet.main.id}"
+
+    tags {
+        Name = "Data Dog"
+        realm = "experimental"
+        purpose = "monitoring-simulation"
+        created-by = "Terraform"
+    }
+}
+
+resource "aws_eip" "data_dog" {
+    instance = "${aws_instance.data_dog.id}"
+    vpc = true
+}
+
